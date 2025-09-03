@@ -6,11 +6,338 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <style>
+      .main-container {
+        display: flex;
+        flex-direction: row; /* Left-right layout */
+        gap: 30px; /* Space between info and tabs */
+        padding: 20px 40px; /* Top/bottom and side padding */
+        align-items: flex-start; /* Align to top */
+        flex-wrap: nowrap; /* Prevent wrapping */
+      }
+      .student-container {
+        display: flex;
+        flex-direction: row; /* Left-right layout */
+        gap: 30px; /* Space between info and tabs */
+        padding: 20px 40px; /* Top/bottom and side padding */
+        align-items: flex-start; /* Align to top */
+        flex-wrap: nowrap; /* Prevent wrapping */
+      }
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: Arial, sans-serif;
+      }
+
+      .user-info-container {
+        flex: 1;
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 12px;
+        height: fit-content;
+      }
+
+      .tabs-container {
+        flex: 2;
+      }
+
+      /* Tabs */
+      .tab {
+        overflow: hidden;
+        border-bottom: 1px solid #ccc;
+        margin-bottom: 10px;
+      }
+
+      .tab button {
+        background-color: inherit;
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        padding: 12px 20px;
+        transition: 0.3s;
+        font-size: 16px;
+      }
+
+      .tab button.active {
+        background-color: #5563de;
+        color: white;
+        border-radius: 5px 5px 0 0;
+      }
+
+      .tabcontent {
+        display: none;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+
+      th {
+        background-color: #5563de;
+        color: white;
+      }
+
+      tr:hover {
+        background-color: #e2e2f0;
+        cursor: pointer;
+      }
+
+      .user-details {
+        margin-top: 15px;
+        background: #f9f9f9;
+        padding: 10px;
+        border-radius: 8px;
+      }
+    </style>
   </head>
   <body>
-    <div class="container">
-      <h2>Welcome, {{ user }} 🎉</h2>
-      <a href="{{ url_for('logout') }}"><button>Logout</button></a>
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">Training System</div>
+      <div class="user-dropdown">
+        <button class="dropbtn" id="profileBtn">
+          <i class="fas fa-user-circle profile-icon"></i> {{ user }}
+          <i class="fas fa-caret-down"></i>
+        </button>
+        <div class="dropdown-content" id="dropdown">
+          <a href="{{ url_for('logout') }}">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    {% if session['userType'] in ['trainer', 'admin'] %}
+    <div class="main-container">
+      <!-- Left side: User info + Upload (Trainer/Admin) -->
+      <div class="user-info-container">
+        <h2>Welcome, {{ user }} 🎉</h2>
+        <p><strong>Username:</strong> {{ user }}</p>
+        <p><strong>Email:</strong> {{ session.get('email', 'N/A') }}</p>
+        <p><strong>Phone:</strong> {{ session.get('phoneNumber', 'N/A') }}</p>
+        <p><strong>User Type:</strong> {{ session.get('userType') }}</p>
+
+        <!-- Upload form for Trainers and Admin -->
+        {% if session['userType'] in ['trainer', 'admin'] %}
+        <div class="upload-section" style="margin-top: 20px">
+          <h3>Upload Training Document</h3>
+          {% with messages = get_flashed_messages(with_categories=true) %} {% if
+          messages %} {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %} {% endif %} {% endwith %}
+          <form
+            method="POST"
+            action="{{ url_for('upload_document') }}"
+            enctype="multipart/form-data"
+          >
+            <input
+              type="text"
+              name="title"
+              placeholder="Document Title"
+              required
+            /><br />
+            <input type="file" name="file" required /><br />
+            <button type="submit">Upload</button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {% if session['userType'] in ['admin'] %}
+      <div class="tabs-container">
+        <!-- Admin tabs -->
+        <div class="tab">
+          <button class="tablinks active" onclick="openTab(event, 'Trainers')">
+            Trainers
+          </button>
+          <button class="tablinks" onclick="openTab(event, 'Students')">
+            Students
+          </button>
+          <button class="tablinks" onclick="openTab(event, 'UploadedDocs')">
+            Uploaded Docs
+          </button>
+        </div>
+
+        <!-- Trainers Tab -->
+        <div id="Trainers" class="tabcontent" style="display: block">
+          <table>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Created</th>
+            </tr>
+            {% for t in user_tables['trainers'] %}
+            <tr>
+              <td>{{ t[0] }}</td>
+              <td>{{ t[1] }}</td>
+              <td>{{ t[2] }}</td>
+              <td>{{ t[3] }}</td>
+              <td>{{ t[4] }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+
+        <!-- Students Tab -->
+        <div id="Students" class="tabcontent">
+          <table>
+            <tr>
+              <th>ID</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Created</th>
+            </tr>
+            {% for s in user_tables['students'] %}
+            <tr>
+              <td>{{ s[0] }}</td>
+              <td>{{ s[1] }}</td>
+              <td>{{ s[2] }}</td>
+              <td>{{ s[3] }}</td>
+              <td>{{ s[4] }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+
+        <!-- Uploaded Docs Tab -->
+        <div id="UploadedDocs" class="tabcontent">
+          <table>
+            <tr>
+              <th>Title</th>
+              <th>Uploaded By</th>
+              <th>Date</th>
+              <th>User Type</th>
+              <th>Action</th>
+            </tr>
+            {% for doc in documents %}
+            <tr>
+              <td>{{ doc[0] }}</td>
+              <td>{{ doc[2] }}</td>
+              <td>{{ doc[3] }}</td>
+              <td>{{ doc[4] }}</td>
+              <td>
+                <a href="{{ url_for('download_file', filename=doc[1]) }}"
+                  >View/Download</a
+                >
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+      {% endif %}
     </div>
+    {% endif %} {% if session['userType'] == 'student' %}
+    <div class="main-container">
+      <!-- Left: Student Info -->
+      <div class="user-info-container">
+        <h2>Welcome, {{ user }} 🎉</h2>
+        <p><strong>Username:</strong> {{ user }}</p>
+        <p><strong>Email:</strong> {{ session.get('email', 'N/A') }}</p>
+        <p><strong>Phone:</strong> {{ session.get('phoneNumber', 'N/A') }}</p>
+        <p><strong>User Type:</strong> {{ session.get('userType') }}</p>
+      </div>
+
+      <!-- Right: Uploaded Docs -->
+      <div class="tabs-container">
+        <div class="tab">
+          <button
+            class="tablinks active"
+            onclick="openTab(event, 'UploadedDocs')"
+          >
+            Uploaded Docs
+          </button>
+        </div>
+
+        <div id="UploadedDocs" class="tabcontent" style="display: block">
+          <table>
+            <tr>
+              <th>Title</th>
+              <th>Uploaded By</th>
+              <th>Date</th>
+              <th>User Type</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+
+            {% for doc in documents %}
+            <tr>
+              <td>{{ doc[1] }}</td>
+              <!-- title -->
+              <td>{{ doc[3] }}</td>
+              <!-- uploaded_by username -->
+              <td>{{ doc[4] }}</td>
+              <!-- upload date -->
+              <td>{{ doc[5] }}</td>
+              <!-- uploader type -->
+              <td>
+                {% set status = training_status.get(doc[0], 'Pending') %} {{
+                status }}
+              </td>
+              <td>
+                {% if status == 'Completed' %}
+                <button disabled>Completed ✅</button>
+                {% elif status == 'Failed' %}
+                <a href="{{ url_for('start_training', doc_id=doc[0]) }}">
+                  Re-take ❌
+                </a>
+                {% else %}
+                <a href="{{ url_for('start_training', doc_id=doc[0]) }}">
+                  Start Training ▶️
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <script>
+      const profileBtn = document.getElementById("profileBtn");
+      const dropdown = document.getElementById("dropdown");
+
+      profileBtn.addEventListener("click", function (event) {
+        event.stopPropagation();
+        dropdown.classList.toggle("show");
+      });
+
+      window.addEventListener("click", function () {
+        if (dropdown.classList.contains("show")) {
+          dropdown.classList.remove("show");
+        }
+      });
+
+      function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+          tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+          tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+      }
+    </script>
   </body>
 </html>

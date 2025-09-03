@@ -134,3 +134,187 @@ body {
     border: 1px solid #b8daff;
 }
 
+
+/* ---------------- Header ---------------- */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: #5563DE;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between; /* logo left, profile right */
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    z-index: 1000;
+    box-sizing: border-box; /* ensure padding is included */
+}
+
+.header .logo {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+/* User dropdown container */
+.user-dropdown {
+    position: relative;
+}
+
+/* Profile button */
+.dropbtn {
+    background: none;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Profile icon */
+.profile-icon {
+    font-size: 24px;
+}
+
+/* Dropdown menu */
+.user-dropdown .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%; /* position below profile icon */
+    right: 0;  /* align right edge to parent */
+    background-color: white;
+    min-width: 120px;
+    box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    z-index: 1001;
+}
+
+/* Dropdown links */
+.user-dropdown .dropdown-content a {
+    color: #333;
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    border-bottom: 1px solid #f1f1f1;
+    transition: background 0.2s;
+}
+
+.user-dropdown .dropdown-content a:hover {
+    background-color: #f1f1f1;
+}
+
+/* Show dropdown when toggled */
+.user-dropdown .dropdown-content.show {
+    display: block;
+}
+
+/* ---------------- Adjust forms below header ---------------- */
+.container {
+    margin-top: 120px; /* push form/content below header */
+}
+
+/* ---------------- Optional: responsive header ---------------- */
+@media (max-width: 500px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 20px;
+    }
+    .user-dropdown {
+        margin-top: 10px;
+    }
+}
+
+.admin-actions {
+    margin-top: 20px;
+}
+
+.btn-upload {
+    padding: 12px 20px;
+    background-color: #5563DE;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: 0.3s ease;
+}
+
+.btn-upload:hover {
+    background-color: #3949AB;
+}
+
+
+/* Upload Section */
+.upload-section {
+    background-color: #f9f9f9;
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-align: left;
+}
+
+.upload-section h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.upload-section input[type="text"],
+.upload-section input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.upload-section button {
+    padding: 10px 20px;
+    background-color: #5563DE;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.3s ease;
+}
+
+.upload-section button:hover {
+    background-color: #3949AB;
+}
+
+/* Documents Section */
+.documents-section {
+    margin-top: 30px;
+}
+
+.documents-section h3 {
+    margin-bottom: 10px;
+}
+
+.documents-section ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.documents-section li {
+    background-color: #f1f1f1;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+.documents-section a {
+    color: #5563DE;
+    text-decoration: none;
+    font-weight: bold;
+}
+.documents-section a:hover {
+    text-decoration: underline;
+}
+
+
+

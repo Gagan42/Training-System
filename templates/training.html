@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Training</title>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f5f5f5;
+      }
+
+      .training-container {
+        max-width: 600px;
+        margin: 50px auto;
+        background: #fff;
+        padding: 30px 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      h2 {
+        text-align: center;
+        color: #5563de;
+        margin-bottom: 20px;
+      }
+
+      p {
+        font-size: 18px;
+        margin-bottom: 15px;
+      }
+
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      input[type="radio"] {
+        margin-right: 10px;
+      }
+
+      button {
+        background-color: #5563de;
+        color: #fff;
+        border: none;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        transition: 0.3s;
+      }
+
+      button:hover {
+        background-color: #4149b0;
+      }
+
+      .flash {
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+      }
+
+      .flash.success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+
+      .flash.danger {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="training-container">
+      <h2>Training: {{ document.title }}</h2>
+
+      {% with messages = get_flashed_messages(with_categories=true) %} {% if
+      messages %} {% for category, message in messages %}
+      <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <form method="POST">
+        <p>{{ question.text }}</p>
+
+        {% for option in question.options %}
+        <label>
+          <input type="radio" name="answer" value="{{ option }}" required /> {{
+          option }}
+        </label>
+        {% endfor %}
+
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  </body>
+</html>
