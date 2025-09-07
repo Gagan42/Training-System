@@ -13,19 +13,10 @@
     <style>
       .main-container {
         display: flex;
-        flex-direction: row; /* Left-right layout */
-        gap: 30px; /* Space between info and tabs */
-        padding: 20px 40px; /* Top/bottom and side padding */
-        align-items: flex-start; /* Align to top */
-        flex-wrap: nowrap; /* Prevent wrapping */
-      }
-      .student-container {
-        display: flex;
-        flex-direction: row; /* Left-right layout */
-        gap: 30px; /* Space between info and tabs */
-        padding: 20px 40px; /* Top/bottom and side padding */
-        align-items: flex-start; /* Align to top */
-        flex-wrap: nowrap; /* Prevent wrapping */
+        flex-direction: row;
+        gap: 30px;
+        padding: 20px 40px;
+        align-items: flex-start;
       }
       body,
       html {
@@ -34,7 +25,6 @@
         height: 100%;
         font-family: Arial, sans-serif;
       }
-
       .user-info-container {
         flex: 1;
         background: #f5f5f5;
@@ -42,66 +32,61 @@
         border-radius: 12px;
         height: fit-content;
       }
-
       .tabs-container {
         flex: 2;
       }
-
-      /* Tabs */
       .tab {
         overflow: hidden;
         border-bottom: 1px solid #ccc;
         margin-bottom: 10px;
       }
-
       .tab button {
         background-color: inherit;
-        float: left;
         border: none;
-        outline: none;
         cursor: pointer;
         padding: 12px 20px;
         transition: 0.3s;
         font-size: 16px;
       }
-
       .tab button.active {
         background-color: #5563de;
         color: white;
         border-radius: 5px 5px 0 0;
       }
-
       .tabcontent {
         display: none;
       }
-
       table {
         width: 100%;
         border-collapse: collapse;
       }
-
       th,
       td {
         border: 1px solid #ccc;
         padding: 8px;
         text-align: left;
       }
-
       th {
         background-color: #5563de;
         color: white;
       }
-
       tr:hover {
         background-color: #e2e2f0;
         cursor: pointer;
       }
-
-      .user-details {
-        margin-top: 15px;
-        background: #f9f9f9;
+      .flash {
+        margin: 10px 0;
         padding: 10px;
-        border-radius: 8px;
+        border-radius: 6px;
+      }
+      .flash.success {
+        background: #d4edda;
+      }
+      .flash.danger {
+        background: #f8d7da;
+      }
+      .flash.warning {
+        background: #fff3cd;
       }
     </style>
   </head>
@@ -122,7 +107,7 @@
 
     {% if session['userType'] in ['trainer', 'admin'] %}
     <div class="main-container">
-      <!-- Left side: User info + Upload (Trainer/Admin) -->
+      <!-- Left side: User info + Upload -->
       <div class="user-info-container">
         <h2>Welcome, {{ user }} 🎉</h2>
         <p><strong>Username:</strong> {{ user }}</p>
@@ -130,8 +115,6 @@
         <p><strong>Phone:</strong> {{ session.get('phoneNumber', 'N/A') }}</p>
         <p><strong>User Type:</strong> {{ session.get('userType') }}</p>
 
-        <!-- Upload form for Trainers and Admin -->
-        {% if session['userType'] in ['trainer', 'admin'] %}
         <div class="upload-section" style="margin-top: 20px">
           <h3>Upload Training Document</h3>
           {% with messages = get_flashed_messages(with_categories=true) %} {% if
@@ -153,11 +136,11 @@
             <button type="submit">Upload</button>
           </form>
         </div>
-        {% endif %}
       </div>
-      {% if session['userType'] in ['admin'] %}
+
+      <!-- Admin Tabs -->
+      {% if session['userType'] == 'admin' %}
       <div class="tabs-container">
-        <!-- Admin tabs -->
         <div class="tab">
           <button class="tablinks active" onclick="openTab(event, 'Trainers')">
             Trainers
@@ -170,7 +153,7 @@
           </button>
         </div>
 
-        <!-- Trainers Tab -->
+        <!-- Trainers -->
         <div id="Trainers" class="tabcontent" style="display: block">
           <table>
             <tr>
@@ -192,7 +175,7 @@
           </table>
         </div>
 
-        <!-- Students Tab -->
+        <!-- Students -->
         <div id="Students" class="tabcontent">
           <table>
             <tr>
@@ -214,7 +197,7 @@
           </table>
         </div>
 
-        <!-- Uploaded Docs Tab -->
+        <!-- Uploaded Docs -->
         <div id="UploadedDocs" class="tabcontent">
           <table>
             <tr>
@@ -223,16 +206,22 @@
               <th>Date</th>
               <th>User Type</th>
               <th>Action</th>
+              <th>Quiz</th>
             </tr>
             {% for doc in documents %}
             <tr>
-              <td>{{ doc[0] }}</td>
-              <td>{{ doc[2] }}</td>
+              <td>{{ doc[1] }}</td>
               <td>{{ doc[3] }}</td>
               <td>{{ doc[4] }}</td>
+              <td>{{ doc[5] }}</td>
               <td>
-                <a href="{{ url_for('download_file', filename=doc[1]) }}"
+                <a href="{{ url_for('download_file', filename=doc[2]) }}"
                   >View/Download</a
+                >
+              </td>
+              <td>
+                <a href="{{ url_for('add_quiz', doc_id=doc[0]) }}"
+                  >Add/Edit Quiz</a
                 >
               </td>
             </tr>
@@ -242,9 +231,11 @@
       </div>
       {% endif %}
     </div>
-    {% endif %} {% if session['userType'] == 'student' %}
+    {% endif %}
+
+    <!-- Student View -->
+    {% if session['userType'] == 'student' %}
     <div class="main-container">
-      <!-- Left: Student Info -->
       <div class="user-info-container">
         <h2>Welcome, {{ user }} 🎉</h2>
         <p><strong>Username:</strong> {{ user }}</p>
@@ -253,7 +244,6 @@
         <p><strong>User Type:</strong> {{ session.get('userType') }}</p>
       </div>
 
-      <!-- Right: Uploaded Docs -->
       <div class="tabs-container">
         <div class="tab">
           <button
@@ -271,8 +261,8 @@
               <th>Uploaded By</th>
               <th>Date</th>
               <th>User Type</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th>Docs</th>
+              <th>Quiz</th>
             </tr>
 
             {% for doc in documents %}
@@ -285,21 +275,25 @@
               <!-- upload date -->
               <td>{{ doc[5] }}</td>
               <!-- uploader type -->
+
               <td>
-                {% set status = training_status.get(doc[0], 'Pending') %} {{
-                status }}
+                <a href="{{ url_for('download_file', filename=doc[2]) }}"
+                  >View/Download</a
+                >
               </td>
+
               <td>
-                {% if status == 'Completed' %}
+                {% set quiz_status = doc_quiz_status.get(doc[0], 'not_started')
+                %} {% if quiz_status == 'completed' %}
                 <button disabled>Completed ✅</button>
-                {% elif status == 'Failed' %}
-                <a href="{{ url_for('start_training', doc_id=doc[0]) }}">
-                  Re-take ❌
-                </a>
-                {% else %}
-                <a href="{{ url_for('start_training', doc_id=doc[0]) }}">
-                  Start Training ▶️
-                </a>
+                {% elif quiz_status == 'not_started' %}
+                <a href="{{ url_for('start_quiz', doc_id=doc[0]) }}"
+                  >Start Quiz ▶️</a
+                >
+                {% elif quiz_status == 'failed' %}
+                <a href="{{ url_for('start_quiz', doc_id=doc[0]) }}"
+                  >Re-take ❌</a
+                >
                 {% endif %}
               </td>
             </tr>
@@ -313,18 +307,15 @@
     <script>
       const profileBtn = document.getElementById("profileBtn");
       const dropdown = document.getElementById("dropdown");
-
       profileBtn.addEventListener("click", function (event) {
         event.stopPropagation();
         dropdown.classList.toggle("show");
       });
-
       window.addEventListener("click", function () {
         if (dropdown.classList.contains("show")) {
           dropdown.classList.remove("show");
         }
       });
-
       function openTab(evt, tabName) {
         var i, tabcontent, tablinks;
         tabcontent = document.getElementsByClassName("tabcontent");

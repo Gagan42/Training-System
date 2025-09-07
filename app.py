@@ -67,6 +67,48 @@ def init_db():
         )
     """)
 
+    # Create quiz_questions table
+    # cursor.execute("""
+    #     CREATE TABLE IF NOT EXISTS quiz_questions (
+    #         id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #         document_id INTEGER NOT NULL,
+    #         question_text TEXT NOT NULL,
+    #         options TEXT NOT NULL, -- store as comma-separated or JSON
+    #         correct_answer TEXT NOT NULL,
+    #         FOREIGN KEY (document_id) REFERENCES documents(id)
+    #     )
+    # """)
+
+    # Create quizzes table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS quizzes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            document_id INTEGER NOT NULL,
+            question TEXT NOT NULL,
+            option1 TEXT NOT NULL,
+            option2 TEXT NOT NULL,
+            option3 TEXT,
+            option4 TEXT,
+            correct_answer TEXT NOT NULL,
+            FOREIGN KEY(document_id) REFERENCES documents(id)
+)
+""")
+
+# Create quiz_submissions table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS quiz_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            quiz_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            selected_answer TEXT,
+            status TEXT CHECK(status IN ('completed','failed')) DEFAULT 'failed',
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(quiz_id) REFERENCES quizzes(id),
+            FOREIGN KEY(user_id) REFERENCES users(id),
+            UNIQUE(quiz_id, user_id)
+        )
+""")
+
     conn.commit()
     conn.close()
     print("Database initialized!")
@@ -83,75 +125,77 @@ def allowed_file(filename):
 
 @app.route("/")
 def home():
-    if "user" in session:
-        # Get user info
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, username, email, phoneNumber, userType FROM users WHERE username = ?",
-            (session['user'],)
-        )
-        user_info = cursor.fetchone()
+    if "user" not in session:
+        flash("Please login first.", "info")
+        return redirect(url_for("login"))
+
+    # Fetch user info
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, username, email, phoneNumber, userType FROM users WHERE username = ?",
+        (session['user'],)
+    )
+    user_info = cursor.fetchone()
+    if not user_info:
+        flash("User not found. Please login again.", "danger")
+        session.clear()
         conn.close()
+        return redirect(url_for("login"))
 
-        # Check if user exists
-        if not user_info:
-            flash("User not found. Please login again.", "danger")
-            session.clear()
-            return redirect(url_for("login"))
+    session['user_id'] = user_info[0]
+    session['user'] = user_info[1]
+    session['userType'] = user_info[4]
+    session['email'] = user_info[2] or "N/A"
+    session['phoneNumber'] = user_info[3] or "N/A"
 
-        # Set session values correctly
-        session['user_id'] = user_info[0]   # id (int)
-        session['user'] = user_info[1]      # username (string)
-        session['userType'] = user_info[4]  # admin/trainer/student
+    # Fetch all documents
+    cursor.execute("""
+        SELECT d.id, d.title, d.filename, u.username, d.upload_date, u.userType
+        FROM documents d
+        JOIN users u ON d.uploaded_by = u.id
+        ORDER BY d.upload_date DESC
+    """)
+    documents = cursor.fetchall()
 
-        # Get all documents
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
+    # Quiz status for current student
+    doc_quiz_status = {}
+    if session['userType'] == 'student':
         cursor.execute("""
-            SELECT d.id, d.title, d.filename, u.username, d.upload_date, u.userType
-            FROM documents d
-            JOIN users u ON d.uploaded_by = u.id
-            ORDER BY d.upload_date DESC
-        """)
-        documents = cursor.fetchall()
-
-        # Fetch training status for current user
-        training_status = {}
-        cursor.execute(
-            "SELECT document_id, status FROM training_completions WHERE user_id=?",
-            (session['user_id'],)
-        )
+            SELECT q.document_id, qs.status
+            FROM quizzes q
+            LEFT JOIN quiz_submissions qs 
+            ON q.id = qs.quiz_id AND qs.user_id = ?
+        """, (session['user_id'],))
         for doc_id, status in cursor.fetchall():
-            training_status[doc_id] = status
-        conn.close()
+            if status is None:
+                doc_quiz_status[doc_id] = 'not_started'
+            elif status == 'completed':
+                doc_quiz_status[doc_id] = 'completed'
+            else:
+                doc_quiz_status[doc_id] = 'failed'
 
-        # For admin: fetch all trainers and students
-        user_tables = {}
-        if session['userType'] == 'admin':
-            conn = sqlite3.connect(DB_NAME)
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id, username, email, phoneNumber, createDate FROM users WHERE userType='trainer'"
-            )
-            user_tables['trainers'] = cursor.fetchall()
-
-            cursor.execute(
-                "SELECT id, username, email, phoneNumber, createDate FROM users WHERE userType='student'"
-            )
-            user_tables['students'] = cursor.fetchall()
-            conn.close()
-
-        return render_template(
-            "home.html",
-            user=session["user"],
-            documents=documents,
-            training_status=training_status,
-            user_tables=user_tables if session['userType'] == 'admin' else None
+    # Admin: fetch all trainers and students
+    user_tables = {}
+    if session['userType'] == 'admin':
+        cursor.execute(
+            "SELECT id, username, email, phoneNumber, createDate FROM users WHERE userType='trainer'"
         )
+        user_tables['trainers'] = cursor.fetchall()
+        cursor.execute(
+            "SELECT id, username, email, phoneNumber, createDate FROM users WHERE userType='student'"
+        )
+        user_tables['students'] = cursor.fetchall()
 
-    flash("Please login first.", "info")
-    return redirect(url_for("login"))
+    conn.close()
+
+    return render_template(
+        "home.html",
+        user=session['user'],
+        documents=documents,
+        doc_quiz_status=doc_quiz_status,
+        user_tables=user_tables if session['userType'] == 'admin' else None
+    )
 
 # ----------------- Login -----------------
 
@@ -315,7 +359,6 @@ def view_documents():
 
 # --------download documents------
 
-
 @app.route('/download/<filename>')
 def download_file(filename):
     if 'user' not in session:
@@ -329,47 +372,67 @@ def download_file(filename):
         as_attachment=True  # <-- forces download
     )
 
-# ----------complete-training--------------------------
 
+# ----------------add_quiz--------------------------------
 
-@app.route('/complete_training/<int:doc_id>', methods=['POST'])
-def complete_training(doc_id):
-    if 'user' not in session or session.get('userType') != 'student':
-        flash("Only students can complete training.", "danger")
-        return redirect(url_for('home'))
+@app.route("/add_quiz/<int:doc_id>", methods=["GET", "POST"])
+def add_quiz(doc_id):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
 
-    answer = request.form.get('answer')
-    correct_answer = "4"  # Example: placeholder question/answer
+    # Fetch document title
+    cursor.execute("SELECT title FROM documents WHERE id = ?", (doc_id,))
+    row = cursor.fetchone()
+    if not row:
+        flash("Document not found!", "danger")
+        conn.close()
+        return redirect(url_for("home"))
 
-    if answer.strip() == correct_answer:
+    document_title = row[0]
+    conn.close()
+
+    if request.method == "POST":
+        questions = request.form.getlist("questions[]")
+        option1 = request.form.getlist("option1[]")
+        option2 = request.form.getlist("option2[]")
+        option3 = request.form.getlist("option3[]")
+        option4 = request.form.getlist("option4[]")
+        correct_answers = request.form.getlist("correct_answers[]")
+
+        if not questions:
+            flash("Please add at least one question.", "warning")
+            return redirect(url_for("add_quiz", doc_id=doc_id))
+
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
 
-        # Get user_id
-        cursor.execute("SELECT id FROM users WHERE username = ?",
-                       (session['user'],))
-        user_id = cursor.fetchone()[0]
+        for i in range(len(questions)):
+            q = questions[i]
+            a = option1[i]
+            b = option2[i]
+            c = option3[i] if option3[i] else None
+            d = option4[i] if option4[i] else None
+            correct = correct_answers[i]
 
-        # Insert completion
-        cursor.execute("""
-            "INSERT INTO training_completions (user_id, document_id, status) VALUES (?, ?, ?)",
-            (session['userType'], doc_id, "pending")
-        """, (user_id, doc_id))
+            # Insert quiz question into quizzes table
+            cursor.execute("""
+                INSERT INTO quizzes (document_id, question, option1, option2, option3, option4, correct_answer)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (doc_id, q, a, b, c, d, correct))
 
         conn.commit()
         conn.close()
 
-        flash("🎉 Training completed successfully!", "success")
-    else:
-        flash("❌ Wrong answer. Try again!", "danger")
+        flash("Quiz questions added successfully!", "success")
+        return redirect(url_for("home"))
 
-    return redirect(url_for('home'))
+    return render_template("add_quiz.html", document_id=doc_id, document_title=document_title)
+
+# -------------------start_quiz--------------------
 
 
-# -----------start-training-----------------
-
-@app.route('/start_training/<int:doc_id>', methods=['GET', 'POST'])
-def start_training(doc_id):
+@app.route('/start_quiz/<int:doc_id>', methods=['GET', 'POST'])
+def start_quiz(doc_id):
     if 'user_id' not in session:
         flash("Please login first!", "danger")
         return redirect(url_for('login'))
@@ -377,101 +440,62 @@ def start_training(doc_id):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    # Fetch the document info
-    cursor.execute("SELECT id, title FROM documents WHERE id = ?", (doc_id,))
+    # Fetch document title
+    cursor.execute("SELECT title FROM documents WHERE id = ?", (doc_id,))
     doc = cursor.fetchone()
     if not doc:
         flash("Document not found!", "danger")
         conn.close()
         return redirect(url_for('home'))
+    document_title = doc[0]
 
-    # Example quiz question
-    question = {
-        "text": "What is 2 + 2?",
-        "options": ["3", "4", "5", "6"],
-        "correct": "4"
-    }
+    # Fetch all quiz questions for this document
+    cursor.execute("""
+        SELECT id, question, option1, option2, option3, option4, correct_answer
+        FROM quizzes WHERE document_id = ?
+    """, (doc_id,))
+    rows = cursor.fetchall()
+    conn.close()
 
-    if request.method == "POST":
-        answer = request.form.get('answer')
-        status = "pending"
-        if answer == question['correct']:
-            status = "completed"
-        else:
-            status = "re-take"
+    if not rows:
+        flash("Quiz not created yet for this document!", "warning")
+        return redirect(url_for('home'))
 
-        # Insert or update training completion
-        cursor.execute("""
-            SELECT id FROM training_completions WHERE user_id=? AND document_id=?
-        """, (session['user_id'], doc_id))
-        existing = cursor.fetchone()
+    quiz = []
+    for row in rows:
+        quiz.append({
+            "id": row[0],
+            "question": row[1],
+            "option1": row[2],
+            "option2": row[3],
+            "option3": row[4],
+            "option4": row[5],
+            "correct": row[6]
+        })
 
-        if existing:
+    if request.method == 'POST':
+        conn = sqlite3.connect(DB_NAME)
+        cursor = conn.cursor()
+
+        for q in quiz:
+            selected = request.form.get(f"question_{q['id']}")
+            status = "completed" if selected == q['correct'] else "failed"
+
+            # Insert or update quiz submission
             cursor.execute("""
-                UPDATE training_completions
-                SET status=?, completed_at=CURRENT_TIMESTAMP
-                WHERE user_id=? AND document_id=?
-            """, ('completed', session['user_id'], doc_id))
-
-        else:
-            cursor.execute("""
-                INSERT INTO training_completions (user_id, document_id, status)
-                VALUES (?, ?, ?)
-            """, (session['user_id'], doc_id, 'pending'))
+                INSERT INTO quiz_submissions (quiz_id, user_id, selected_answer, status)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(quiz_id, user_id)
+                DO UPDATE SET selected_answer=excluded.selected_answer, status=excluded.status, submitted_at=CURRENT_TIMESTAMP
+            """, (q['id'], session['user_id'], selected, status))
 
         conn.commit()
         conn.close()
-        flash(f"Training marked as '{status}'", "success")
+
+        flash("Quiz submitted successfully!", "success")
         return redirect(url_for('home'))
 
-    conn.close()
-    return render_template('training.html', document={"id": doc[0], "title": doc[1]}, question=question)
-
-
-# -----------submit-training--------------------
-
-@app.route("/submit_training/<int:doc_id>", methods=["POST"])
-def submit_training(doc_id):
-    if "user" not in session or session.get("userType") != "student":
-        flash("Only students can submit training.", "danger")
-        return redirect(url_for("home"))
-
-    # Get the submitted answer from the form
-    answer = request.form.get("answer")
-
-    if not answer:
-        flash("Please answer the question before submitting.", "warning")
-        return redirect(url_for("start_training", doc_id=doc_id))
-
-    # Here you can define the correct answer for simplicity
-    correct_answer = "42"  # Example correct answer
-
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-
-    # Determine training status
-    if answer.strip() == correct_answer:
-        status = "completed"
-    else:
-        status = "re-take"
-
-    # Update or insert record in training_completions
-    cursor.execute(
-        """
-        INSERT INTO training_completions (user_id, document_id, status, completed_at)
-        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(user_id, document_id)
-        DO UPDATE SET status=excluded.status, completed_at=CURRENT_TIMESTAMP
-        """,
-        (session['user_id'], doc_id, status)
-    )
-
-    conn.commit()
-    conn.close()
-
-    flash(f"Training marked as '{status}'.", "success")
-    return redirect(url_for("home"))
-
+    return render_template("start_quiz.html", document_title=document_title, quiz=quiz)
 
 # ----------------- Logout -----------------
 

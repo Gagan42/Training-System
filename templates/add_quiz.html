@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Add Quiz - {{ document_title }}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f6f9;
+        margin: 0;
+        padding: 20px;
+      }
+      h2 {
+        text-align: center;
+        color: #333;
+      }
+      form {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      .question-block {
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        position: relative;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+      }
+      .question-block:hover {
+        transform: scale(1.01);
+      }
+      .remove-btn {
+        position: absolute;
+        top: 0px;
+        right: 15px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      .remove-btn:hover {
+        background: #c0392b;
+      }
+      label {
+        display: block;
+        margin-top: 10px;
+        font-weight: bold;
+      }
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        margin-top: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+      button {
+        padding: 10px 20px;
+        margin-top: 15px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: bold;
+      }
+      button[type="submit"] {
+        background-color: #5563de;
+        color: white;
+      }
+      button[type="submit"]:hover {
+        background-color: #414bb0;
+      }
+      button.add-question-btn {
+        background-color: #2ecc71;
+        color: white;
+      }
+      button.add-question-btn:hover {
+        background-color: #27ae60;
+      }
+      .flash {
+        padding: 10px 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .flash.success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .flash.danger {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+      .flash.warning {
+        background-color: #fff3cd;
+        color: #856404;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Add Quiz for Document: {{ document_title }}</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %} {% if
+    messages %} {% for category, message in messages %}
+    <div class="flash {{ category }}">{{ message }}</div>
+    {% endfor %} {% endif %} {% endwith %}
+
+    <form method="POST">
+      <input type="hidden" name="document_id" value="{{ document_id }}" />
+      <div id="questions-container">
+        <div class="question-block">
+          <button
+            type="button"
+            class="remove-btn"
+            onclick="removeQuestion(this)"
+          >
+            Remove
+          </button>
+          <label>Question:</label>
+          <input type="text" name="questions[]" required />
+          <label>Option A:</label>
+          <input type="text" name="option1[]" required />
+          <label>Option B:</label>
+          <input type="text" name="option2[]" required />
+          <label>Option C:</label>
+          <input type="text" name="option3[]" />
+          <label>Option D:</label>
+          <input type="text" name="option4[]" />
+          <label>Correct Answer:</label>
+          <select name="correct_answers[]" required>
+            <option value="">--Select--</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="add-question-btn" onclick="addQuestion()">
+        ➕ Add Another Question</button
+      ><br />
+      <button type="submit">Submit Quiz</button>
+    </form>
+
+    <script>
+      function addQuestion() {
+        const container = document.getElementById("questions-container");
+        const block = document.createElement("div");
+        block.className = "question-block";
+        block.innerHTML = `
+          <button type="button" class="remove-btn" onclick="removeQuestion(this)">Remove</button>
+          <label>Question:</label>
+          <input type="text" name="questions[]" required>
+          <label>Option A:</label>
+          <input type="text" name="option1[]" required>
+          <label>Option B:</label>
+          <input type="text" name="option2[]" required>
+          <label>Option C:</label>
+          <input type="text" name="option3[]">
+          <label>Option D:</label>
+          <input type="text" name="option4[]">
+          <label>Correct Answer:</label>
+          <select name="correct_answers[]" required>
+            <option value="">--Select--</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+        `;
+        container.appendChild(block);
+      }
+
+      function removeQuestion(btn) {
+        const block = btn.parentElement;
+        block.remove();
+      }
+    </script>
+  </body>
+</html>
