@@ -151,6 +151,9 @@
           <button class="tablinks" onclick="openTab(event, 'UploadedDocs')">
             Uploaded Docs
           </button>
+          <button class="tablinks" onclick="openTab(event, 'QuizSummary')">
+            Quiz Summary
+          </button>
         </div>
 
         <!-- Trainers -->
@@ -215,18 +218,43 @@
               <td>{{ doc[4] }}</td>
               <td>{{ doc[5] }}</td>
               <td>
-                <a href="{{ url_for('download_file', filename=doc[2]) }}"
-                  >View/Download</a
-                >
+                <a href="{{ url_for('download_file', filename=doc[2]) }}">
+                  View/Download
+                </a>
               </td>
               <td>
-                <a href="{{ url_for('add_quiz', doc_id=doc[0]) }}"
-                  >Add/Edit Quiz</a
-                >
+                <a href="{{ url_for('add_quiz', doc_id=doc[0]) }}">
+                  Add/Edit Quiz
+                </a>
               </td>
             </tr>
             {% endfor %}
           </table>
+        </div>
+
+        <!-- Quiz Summary -->
+        <div id="QuizSummary" class="tabcontent">
+          {% if quiz_summary %} {% for title, attempts in quiz_summary.items()
+          %}
+          <h3>{{ title }}</h3>
+          <table>
+            <tr>
+              <th>Student</th>
+              <th>Status</th>
+              <th>Submitted At</th>
+            </tr>
+            {% for a in attempts %}
+            <tr>
+              <td>{{ a.username }}</td>
+              <td>{{ a.status }}</td>
+              <td>{{ a.submitted_at }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          <br />
+          {% endfor %} {% else %}
+          <p>No quiz submissions yet.</p>
+          {% endif %}
         </div>
       </div>
       {% endif %}
@@ -264,36 +292,29 @@
               <th>Docs</th>
               <th>Quiz</th>
             </tr>
-
             {% for doc in documents %}
             <tr>
               <td>{{ doc[1] }}</td>
-              <!-- title -->
               <td>{{ doc[3] }}</td>
-              <!-- uploaded_by username -->
               <td>{{ doc[4] }}</td>
-              <!-- upload date -->
               <td>{{ doc[5] }}</td>
-              <!-- uploader type -->
-
               <td>
-                <a href="{{ url_for('download_file', filename=doc[2]) }}"
-                  >View/Download</a
-                >
+                <a href="{{ url_for('download_file', filename=doc[2]) }}">
+                  View/Download
+                </a>
               </td>
-
               <td>
                 {% set quiz_status = doc_quiz_status.get(doc[0], 'not_started')
                 %} {% if quiz_status == 'completed' %}
                 <button disabled>Completed ✅</button>
                 {% elif quiz_status == 'not_started' %}
-                <a href="{{ url_for('start_quiz', doc_id=doc[0]) }}"
-                  >Start Quiz ▶️</a
-                >
+                <a href="{{ url_for('start_quiz', doc_id=doc[0]) }}">
+                  Start Quiz ▶️
+                </a>
                 {% elif quiz_status == 'failed' %}
-                <a href="{{ url_for('start_quiz', doc_id=doc[0]) }}"
-                  >Re-take ❌</a
-                >
+                <a href="{{ url_for('start_quiz', doc_id=doc[0]) }}">
+                  Re-take ❌
+                </a>
                 {% endif %}
               </td>
             </tr>

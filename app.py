@@ -129,9 +129,10 @@ def home():
         flash("Please login first.", "info")
         return redirect(url_for("login"))
 
-    # Fetch user info
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+
+    # Fetch user info
     cursor.execute(
         "SELECT id, username, email, phoneNumber, userType FROM users WHERE username = ?",
         (session['user'],)
@@ -165,7 +166,7 @@ def home():
             SELECT q.document_id, qs.status
             FROM quizzes q
             LEFT JOIN quiz_submissions qs 
-            ON q.id = qs.quiz_id AND qs.user_id = ?
+                ON q.id = qs.quiz_id AND qs.user_id = ?
         """, (session['user_id'],))
         for doc_id, status in cursor.fetchall():
             if status is None:
@@ -175,17 +176,43 @@ def home():
             else:
                 doc_quiz_status[doc_id] = 'failed'
 
-    # Admin: fetch all trainers and students
-    user_tables = {}
+    # Default values for everyone
+    user_tables = None
+    quiz_summary = {}
+
+    # Admin: fetch all trainers, students, and quiz summary
     if session['userType'] == 'admin':
         cursor.execute(
             "SELECT id, username, email, phoneNumber, createDate FROM users WHERE userType='trainer'"
         )
-        user_tables['trainers'] = cursor.fetchall()
+        trainers = cursor.fetchall()
+
         cursor.execute(
             "SELECT id, username, email, phoneNumber, createDate FROM users WHERE userType='student'"
         )
-        user_tables['students'] = cursor.fetchall()
+        students = cursor.fetchall()
+
+        user_tables = {"trainers": trainers, "students": students}
+
+        # Quiz summary (all student attempts)
+        cursor.execute("""
+            SELECT d.title, u.username, qs.status, qs.submitted_at
+            FROM quiz_submissions qs
+            JOIN quizzes q ON qs.quiz_id = q.id
+            JOIN documents d ON q.document_id = d.id
+            JOIN users u ON qs.user_id = u.id
+            ORDER BY d.title, qs.submitted_at DESC
+        """)
+        rows = cursor.fetchall()
+
+        for title, username, status, submitted_at in rows:
+            if title not in quiz_summary:
+                quiz_summary[title] = []
+            quiz_summary[title].append({
+                "username": username,
+                "status": status,
+                "submitted_at": submitted_at
+            })
 
     conn.close()
 
@@ -194,8 +221,10 @@ def home():
         user=session['user'],
         documents=documents,
         doc_quiz_status=doc_quiz_status,
-        user_tables=user_tables if session['userType'] == 'admin' else None
+        user_tables=user_tables,
+        quiz_summary=quiz_summary
     )
+
 
 # ----------------- Login -----------------
 
